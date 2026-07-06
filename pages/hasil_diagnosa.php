@@ -1,5 +1,6 @@
 <?php require_once '../includes/layout.php';
 layoutHead('Hasil Diagnosis');
+layoutBody();
 ?>
 <style>
     .page-bg { background: #0F0F14; }
@@ -33,8 +34,6 @@ layoutHead('Hasil Diagnosis');
         * { color: #000 !important; background: transparent !important; border-color: #0F0F14 !important; }
     }
 </style>
-</head>
-<body class="page-bg min-h-screen">
 
 <?php
 require_once __DIR__ . '/../config/database.php';
@@ -267,7 +266,6 @@ $conn->close();
         </div>
     </div>
 
-    <!-- ══ TABEL UTAMA ══ -->
     <div class="no-print max-w-6xl mx-auto py-6">
     <!-- Content -->
     <div class="flex flex-col lg:flex-row gap-5 items-start">
@@ -288,15 +286,10 @@ $conn->close();
                     </span>
                 </div>
             </div>
-            <p class="mt-2 text-base font-semibold">
-                <?= $statusUtama['jml_cocok'] ?>
-                /
-                <?= $statusUtama['total_gejala'] ?>
-                Gejala cocok
-            </p>
+
         </div>
         <!-- KANAN -->
-        <div class="flex-1 bg-white rounded-[24px] p-6 border border-dark">
+        <div class="flex-1 bg-white rounded-[24px] p-6 card-glass">
             <!-- Penyakit -->
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-2 underline decoration-accent decoration-8 underline-offset-4">

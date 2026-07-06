@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnosa Penyakit — SIPATIN</title>
+
     <?php require_once '../includes/layout.php'; 
     
     layoutHead('Diagnosa Penyakit');
+    layoutBody('bg-[#F5F4EF] min-h-screen');
     ?>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-
         /* Gejala item checked — warna sesuai admin (#C8F135 accent) */
         .gejala-item input[type=checkbox]:checked + label {
             background: #FAFDE8;
@@ -28,8 +22,6 @@
         .check-icon { transition: all 0.15s ease; opacity: 0; }
         .label-hover:hover { background: #F5F4EF; border-color: #C8F135; }
     </style>
-</head>
-<body class="bg-[#F5F4EF] min-h-screen">
 
 <?php
 require_once __DIR__ . '/../config/database.php';
@@ -234,6 +226,3 @@ function pilihSemua(state) {
 updateUI();
 </script>
 <?php layoutFoot();?>
-
-</body>
-</html>

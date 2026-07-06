@@ -1,6 +1,7 @@
     <?php 
         require_once '../includes/layout.php'; 
         layoutHead('Beranda');
+        layoutBody('bg-[#F5F4EF] min-h-screen');
     ?>
     <style>
         * { scroll-behavior: smooth; }
@@ -17,10 +18,7 @@
         .delay-300 { animation-delay: 0.3s; }
         .opacity-0-init { opacity: 0; }
         nav.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.1); background: white !important; }
-
     </style>
-</head>
-<body class="bg-[#F5F4EF] min-h-screen">
 
 <?php
 // ── Koneksi database — sesuai struktur folder proyek ──
@@ -49,8 +47,6 @@ $jml_aturan   = $conn->query("SELECT COUNT(*) t FROM basis_aturan")->fetch_assoc
                 <a href="#beranda"  class="text-muted hover:text-white font-medium nav-link transition-colors duration-300 text-sm">Beranda</a>
                 <a href="#tentang"  class="text-muted hover:text-white font-medium nav-link transition-colors duration-300 text-sm">Tentang</a>
                 <a href="#fakta"    class="text-muted hover:text-white font-medium nav-link transition-colors duration-300 text-sm">Fakta Ikan Patin</a>
-                <a href="#penyakit" class="text-muted hover:text-white font-medium nav-link transition-colors duration-300 text-sm">Penyakit</a>
-                <!-- Link diagnosa — sesuai struktur proyek (section #diagnosa di halaman yang sama) -->
                 <a href="diagnosa.php" class="btn-accent">
                     <i class="fas fa-stethoscope mr-2"></i>Mulai Diagnosa
                 </a>
@@ -65,7 +61,6 @@ $jml_aturan   = $conn->query("SELECT COUNT(*) t FROM basis_aturan")->fetch_assoc
         <div class="px-4 py-3 space-y-2">
             <a href="#beranda"  class="block py-2 text-dark font-medium text-sm">Beranda</a>
             <a href="#fakta"    class="block py-2 text-dark font-medium text-sm">Fakta Ikan Patin</a>
-            <a href="#penyakit" class="block py-2 text-dark font-medium text-sm">Penyakit</a>
             <a href="diagnosa.php" class="block py-2 bg-accent text-dark text-center rounded-lg font-semibold text-sm">Mulai Diagnosa</a>
         </div>
     </div>
@@ -230,74 +225,6 @@ $jml_aturan   = $conn->query("SELECT COUNT(*) t FROM basis_aturan")->fetch_assoc
 </section>
 
 <!-- ══════════════════════════════
-     PENYAKIT — data dari database
-══════════════════════════════ -->
-<section id="penyakit" class="py-20 bg-#F5F4EF">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-14">
-            <span class="text-red-500 font-semibold text-sm uppercase tracking-widest">Waspada</span>
-            <h2 class="text-3xl font-extrabold text-gray-900 mt-2">Penyakit Umum Ikan Patin</h2>
-            <p class="text-gray-500 mt-3 max-w-2xl mx-auto">Kenali penyakit-penyakit yang sering menyerang ikan patin agar dapat dicegah dan ditangani lebih awal</p>
-        </div>
-
-        <?php
-        // ── Ambil data penyakit — kolom sesuai tabel: kode, nama, jenis, deskripsi ──
-        $stmt   = $conn->query("SELECT * FROM penyakit ORDER BY kode_penyakit ASC LIMIT 6");
-        $daftar = $stmt->fetch_all(MYSQLI_ASSOC);
-
-        $colors = ['blue','teal','green','purple','red','orange'];
-        $icons  = [
-            'Bakteri' => 'fas fa-bacterium',
-            'Virus'   => 'fas fa-virus',
-            'Jamur'   => 'fas fa-cloud',
-            'Parasit' => 'fas fa-bug',
-        ];
-        $badgeClass = [
-            'Bakteri' => 'bg-orange-50 text-orange-600',
-            'Virus'   => 'bg-red-50 text-red-600',
-            'Jamur'   => 'bg-green-50 text-green-600',
-            'Parasit' => 'bg-purple-50 text-purple-600',
-        ];
-        ?>
-
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <?php foreach ($daftar as $i => $p):
-                $c    = $colors[$i % count($colors)];
-                $icon = $icons[$p['jenis']] ?? 'fas fa-circle-dot';
-            ?>
-            <div class="bg-white rounded-2xl p-6 card-hover border border-[#E8E7E1]">
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-10 h-10 bg-<?= $c ?>-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="<?= $icon ?> text-<?= $c ?>-600 text-sm"></i>
-                    </div>
-                    <div>
-                        <!-- Kolom sesuai tabel: kode, nama -->
-                        <span class="text-xs font-mono text-accent bg-dark px-2 py-0.5 rounded">
-                            <?= htmlspecialchars($p['kode_penyakit']) ?>
-                        </span>
-                        <h4 class="font-bold text-gray-800 mt-1 text-sm">
-                            <?= htmlspecialchars($p['nama_penyakit']) ?>
-                        </h4>
-                    </div>
-                </div>
-                <p class="text-gray-500 text-xs leading-relaxed line-clamp-3">
-                    <?= htmlspecialchars($p['deskripsi'] ?? '-') ?>
-                </p>
-                <div class="mt-3">
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full <?= $badgeClass[$p['jenis']] ?? 'bg-gray-100 text-gray-500' ?>">
-                        <?= htmlspecialchars($p['jenis']) ?>
-                    </span>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-
-
-
-
-<!-- ══════════════════════════════
      FOOTER
 ══════════════════════════════ -->
 <footer class="bg-dark py-12">
@@ -376,5 +303,3 @@ document.querySelectorAll('.card-hover, .fact-card').forEach(el => {
 
 </script>
 <?php layoutFoot(); ?>
-</body>
-</html>
