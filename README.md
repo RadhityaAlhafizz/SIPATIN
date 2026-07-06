@@ -1,6 +1,6 @@
 # SIPATIN | Sistem Pakar Diagnosa Penyakit Ikan Patin
 
-> Aplikasi web berbasis PHP/MySQL untuk mendiagnosa penyakit ikan patin (*Pangasianodon hypophthalmus*) menggunakan metode **Forward Chaining**.
+> Aplikasi web berbasis PHP Native/MySQL untuk mendiagnosa penyakit ikan patin (*Pangasianodon hypophthalmus*) menggunakan metode **Forward Chaining**.
 
 ---
 
@@ -58,7 +58,7 @@ Persentase = (Jumlah Gejala Cocok / Total Gejala Penyakit) × 100%
 ## 📁 Struktur Direktori
 
 ```
-SistemPakar/
+SIPATIN/
 ├── assets/
 │   ├── hero-patin.jpg
 │   └── logo-patin-SIPATIN.webp
