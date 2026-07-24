@@ -36,7 +36,7 @@ layoutBody();
 </style>
 
 <?php
-require_once __DIR__ . '/../config/database.php';
+require_once '../config/database.php';
 $conn = getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['gejala'])) {
@@ -49,7 +49,7 @@ $ids_str       = implode(',', $gejalaDipilih);
 
 $res = $conn->query(
     "SELECT ba.id_penyakit,
-            p.kode_penyakit AS p_kode, p.nama_penyakit AS p_nama, p.jenis AS p_jenis,
+            p.kode_penyakit AS p_kode, p.nama_penyakit AS p_nama, p.jenis AS p_jenis, p.tingkatan AS p_tingkatan,
             p.deskripsi AS p_deskripsi,
             g.kode_gejala AS g_kode, g.nama_gejala AS g_nama,
             s.kode_solusi AS s_kode, s.deskripsi AS s_deskripsi
@@ -72,7 +72,7 @@ $infoPenyakit = []; $gejalaCocok = []; $solusiList = [];
 while ($r = $res->fetch_assoc()) {
     $pid = $r['id_penyakit'];
     if (!isset($infoPenyakit[$pid]))
-        $infoPenyakit[$pid] = ['kode'=>$r['p_kode'],'nama'=>$r['p_nama'],'jenis'=>$r['p_jenis'],'deskripsi'=>$r['p_deskripsi']];
+        $infoPenyakit[$pid] = ['kode'=>$r['p_kode'],'nama'=>$r['p_nama'],'jenis'=>$r['p_jenis'],'tingkatan'=>$r['p_tingkatan'],'deskripsi'=>$r['p_deskripsi']];
     if (!in_array($r['g_nama'], $gejalaCocok[$pid] ?? []))
         $gejalaCocok[$pid][] = $r['g_nama'];
     $ada = array_filter($solusiList[$pid] ?? [], fn($s) => $s['kode'] === $r['s_kode']);
@@ -83,15 +83,15 @@ $hasilDiagnosa = [];
 foreach ($infoPenyakit as $pid => $info) {
     $jmlCocok    = count($gejalaCocok[$pid] ?? []);
     $totalGejala = $totalGejalaPenyakit[$pid] ?? 1;
-    $persentase  = min(100, round(($jmlCocok / $totalGejala) * 100, 1));
+    
     $hasilDiagnosa[] = [
-        'kode'=>$info['kode'],'nama'=>$info['nama'],'jenis'=>$info['jenis'],
-        'deskripsi'=>$info['deskripsi'],'persentase'=>$persentase,
+        'kode'=>$info['kode'],'nama'=>$info['nama'],'jenis'=>$info['jenis'],'tingkatan'=>$info['tingkatan'],
+        'deskripsi'=>$info['deskripsi'],
         'gejala_cocok'=>$gejalaCocok[$pid]??[],'solusi'=>$solusiList[$pid]??[],
         'jml_cocok'=>$jmlCocok,'total_gejala'=>$totalGejala,
     ];
 }
-usort($hasilDiagnosa, fn($a,$b) => $b['persentase'] <=> $a['persentase']);
+usort($hasilDiagnosa, fn($a,$b) => $b['jml_cocok'] <=> $a['jml_cocok']);
 
 $gejalaDetail = [];
 if (!empty($gejalaDipilih)) {
@@ -105,11 +105,11 @@ $cekTabel = $conn->query("SHOW TABLES LIKE 'log_diagnosa'");
 if ($cekTabel && $cekTabel->num_rows > 0) {
     $logG = json_encode(array_values(array_column($gejalaDetail, 'nama')));
     $logH = empty($hasilDiagnosa) ? 'Tidak terdeteksi'
-          : implode(', ', array_map(fn($h) => $h['nama'].' ('.$h['persentase'].'%)', $hasilDiagnosa));
-    $penyakitUtama = $persentaseUtama = null;
-    if (!empty($hasilDiagnosa)) { $penyakitUtama=$hasilDiagnosa[0]['nama']; $persentaseUtama=$hasilDiagnosa[0]['persentase']; }
-    $stLog = $conn->prepare("INSERT INTO log_diagnosa (nama_pengguna,penyakit_utama,persentase,gejala_dipilih,hasil_diagnosa) VALUES (?,?,?,?,?)");
-    if ($stLog) { $stLog->bind_param("ssdss",$namaPengguna,$penyakitUtama,$persentaseUtama,$logG,$logH); $stLog->execute(); $stLog->close(); }
+      : implode(', ', array_column($hasilDiagnosa, 'nama'));
+
+    $penyakitUtama = $hasilDiagnosa[0]['nama'] ?? null;
+    $stLog = $conn->prepare("INSERT INTO log_diagnosa (nama_pengguna,penyakit_utama,gejala_dipilih,hasil_diagnosa) VALUES (?,?,?,?)");
+    if ($stLog) { $stLog->bind_param("ssss",$namaPengguna,$penyakitUtama,$logG,$logH); $stLog->execute(); $stLog->close(); }
 }
 
 $tanggal     = date('d F Y, H:i');
@@ -147,13 +147,8 @@ $conn->close();
             Diagnosa Ulang
         </a>
     </div>
-
-    <?php else:
-        $r      = 80;
-        $circ   = 2 * M_PI * $r;
-        $offset = $circ - ($circ * $statusUtama['persentase'] / 100);
-    ?>
-
+    
+    <?php else: ?>
     <div class="print-area" style="display:none;">
         <!-- Kop Surat -->
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px;">
@@ -189,11 +184,6 @@ $conn->close();
                 <td style="padding:3px 0;">Penyakit Utama</td>
                 <td>:</td>
                 <td><?= htmlspecialchars($statusUtama['nama'] ?? '-') ?></td>
-            </tr>
-            <tr>
-                <td style="padding:3px 0;">Tingkat Kecocokan</td>
-                <td>:</td>
-                <td><?= $statusUtama['persentase'] ?? 0 ?>% (<?= $statusUtama['jml_cocok'] ?? 0 ?> dari <?= $statusUtama['total_gejala'] ?? 0 ?> gejala)</td>
             </tr>
         </table>
         <!-- Penyakit Utama & Penanganan -->
@@ -254,128 +244,100 @@ $conn->close();
         </table>
     </div>
 
-    <div class="no-print flex items-center justify-between mb-6">
-        <div class="flex flex-col items-start">
-            <h1 class="text-sm font-semibold text-dark">HASIL DIAGNOSIS</h1>
-            <?php if (!empty($namaPengguna)): ?>
-            <p class="text-sm text-muted"><?= htmlspecialchars($namaPengguna) ?></p>
-            <?php endif; ?>
-        </div>
-        <div class="flex items-center">
-            <p class="text-xs"><?= $tanggal ?></p>
-        </div>
-    </div>
+    <div class="no-print max-w-6xl mx-auto py-4">
+    <div class="flex justify-center">
+        <div class="w-full max-w-2xl overflow-hidden rounded-[20px] border border-white/10 bg-white shadow-[0px_10px_1px_rgba(221,_221,_221,_1),_0_10px_20px_rgba(204,_204,_204,_1)]">
 
-    <div class="no-print max-w-6xl mx-auto py-6">
-    <!-- Content -->
-    <div class="flex flex-col lg:flex-row gap-5 items-start">
-        <!-- KIRI -->
-        <div class="no-print w-full lg:w-[320px] text-center">
-            <div class="relative w-[240px] h-[240px] mx-auto sticky">
-                <svg width="240" height="240" viewBox="0 0 240 240" style="transform:rotate(-90deg); display:block;">
-                            <circle class="ring-track" cx="120" cy="120" r="<?= $r ?>" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
-                            <circle class="ring-arc" cx="120" cy="120" r="<?= $r ?>" fill="none" stroke="#9CC40E" stroke-width="20"
-                                stroke-linecap="round"
-                                stroke-dasharray="<?= $circ ?>"
-                                stroke-dashoffset="<?= $circ ?>"
-                                style="--circ:<?= $circ ?>; --offset:<?= $offset ?>;"/>
-                        </svg>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <span id="ringPct"class="text-5xl font-bold">
-                        <?= round($statusUtama['persentase']) ?>%
+            <!-- Top bar merah -->
+            <div style="height:4px;background:#E24B4A;"></div>
+
+            <!-- Header -->
+            <div class="px-7 pt-6 pb-5 border-b border-[#F0EFE9]">
+                <!-- Tags -->
+                <div class="flex gap-2 mb-3">
+                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#FCEBEB] text-[#791F1F]">
+                        <?= htmlspecialchars($statusUtama['jenis']) ?>
                     </span>
+                    <?php
+                    $tingkatan = $statusUtama['tingkatan'] ?? '';
+                    $tingkatan_color = match($tingkatan) {
+                        'Parah'  => 'bg-[#FCEBEB] text-[#791F1F] border border-[#F09595]',
+                        'Sedang' => 'bg-[#FFF3E0] text-[#854F0B] border border-[#FAC775]',
+                        'Ringan' => 'bg-[#EAF3DE] text-[#3B6D11] border border-[#C0DD97]',
+                        default  => 'bg-[#F1EFE8] text-[#5F5E5A]'
+                    };
+                    ?>
+                    <?php if ($tingkatan): ?>
+                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full <?= $tingkatan_color ?>">
+                        Tingkat <?= htmlspecialchars($tingkatan) ?>
+                    </span>
+                    <?php endif; ?>
                 </div>
-            </div>
 
-        </div>
-        <!-- KANAN -->
-        <div class="flex-1 bg-white rounded-[24px] p-6 card-glass">
-            <!-- Penyakit -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-2 underline decoration-accent decoration-8 underline-offset-4">
-                    Penyakit Utama
-                </h3>
-                <h2 class="text-2xl font-bold">
+                <!-- Nama penyakit -->
+                <h2 class="text-2xl font-semibold italic text-[#1C1C2E] mb-1.5">
                     <?= htmlspecialchars($statusUtama['nama']) ?>
                 </h2>
-                <!-- Penyebab / jenis -->
+
+                <!-- Deskripsi -->
                 <?php if (!empty($statusUtama['deskripsi'])): ?>
-                <p class="text-sm text-dark"><?= htmlspecialchars($statusUtama['deskripsi']) ?></p>
+                <p class="text-sm text-[#9B9AB0] leading-relaxed">
+                    <?= htmlspecialchars($statusUtama['deskripsi']) ?>
+                </p>
                 <?php endif; ?>
             </div>
-            <!-- Gejala -->
-            <div class="mb-6 ">
-                <h3 class="text-lg font-semibold mb-2 underline decoration-accent decoration-8 underline-offset-4">
-                    Gejala yang dipilih
-                </h3>
-                <ul class="gejala-list">
-                    <?php foreach ($gejalaDetail as $g):
-                        $cocok = in_array($g['nama'], $gejalaCocokUtamaNama);
-                    ?>
-                    <li class="<?= $cocok ? 'match' : '' ?> text-base">
-                        <span class="dash">—</span>
-                        <span><?= htmlspecialchars($g['kode']) ?> - <?= htmlspecialchars($g['nama']) ?></span>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
 
-            <!-- Deskripsi -->
-            <div>
-                <h3 class="text-lg font-semibold mb-2 underline decoration-accent decoration-8 underline-offset-4">
-                    Solusi Penanganan
-                </h3>
-                <div>
+            <!-- Body: 2 kolom -->
+            <div class="grid grid-cols-2 divide-x divide-[#F0EFE9] px-0">
+
+                <!-- Kolom gejala -->
+                <div class="px-7 py-5">
+                    <p class="text-[11px] font-semibold text-[#9B9AB0] uppercase tracking-widest mb-3">Gejala yang dipilih</p>
+                    <ul class="space-y-2.5">
+                        <?php foreach ($gejalaDetail as $g):
+                            $cocok = in_array($g['nama'], $gejalaCocokUtamaNama);
+                        ?>
+                        <li class="flex items-start gap-2">
+                            <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 <?= $cocok ? 'bg-[#FCEBEB] text-[#791F1F]' : 'bg-[#F1EFE8] text-[#9B9AB0]' ?>">
+                                <?= htmlspecialchars($g['kode']) ?>
+                            </span>
+                            <span class="text-sm text-[#444441] leading-snug">
+                                <?= htmlspecialchars($g['nama']) ?>
+                            </span>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+
+                <!-- Kolom solusi -->
+                <div class="px-7 py-5">
+                    <p class="text-[11px] font-semibold text-[#9B9AB0] uppercase tracking-widest mb-3">Solusi penanganan</p>
                     <?php foreach ($statusUtama['solusi'] as $sol): ?>
                         <?php if (!empty($sol['desk'])): ?>
-                        <p class = "text-sm leading-6"><?= htmlspecialchars($sol['desk']) ?></p>
+                        <p class="text-sm text-[#444441] leading-7">
+                            <?= htmlspecialchars($sol['desk']) ?>
+                        </p>
                         <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
             </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between px-7 py-3.5 border-t border-[#F0EFE9]">
+                <span class="text-xs text-dark">
+                    <?= $tanggal ?>
+                    <?php if (!empty($namaPengguna)): ?>
+                     · <?= htmlspecialchars($namaPengguna) ?>
+                    <?php endif; ?>
+                </span>
+            </div>
+
         </div>
     </div>
 </div>
+    </div>
     <?php endif; ?>
 </div>
-
-<script>
-(function(){
-    var pct1 = <?= $statusUtama ? $statusUtama['persentase'] : 0 ?>;
-    <?php if (isset($hasilDiagnosa[1])): ?>
-    var pct2 = <?= $hasilDiagnosa[1]['persentase'] ?>;
-    <?php else: ?>
-    var pct2 = 0;
-    <?php endif; ?>
-
-    function countUp(elId, target, duration) {
-        var el = document.getElementById(elId);
-        if (!el) return;
-        var start = null;
-        function step(ts) {
-            if (!start) start = ts;
-            var p = Math.min((ts - start) / duration, 1);
-            var ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p;
-            el.textContent = Math.round(ease * target) + '%';
-            if (p < 1) requestAnimationFrame(step);
-            else el.textContent = target + '%';
-        }
-        requestAnimationFrame(step);
-    }
-
-    window.addEventListener('DOMContentLoaded', function(){
-        
-        document.querySelectorAll('.ring-arc').forEach(function(arc){
-            var offset = arc.style.getPropertyValue('--offset') || arc.dataset.offset;
-            setTimeout(function(){
-                arc.style.strokeDashoffset = offset;
-            }, 100);
-        });
-        countUp('ringPct',  pct1, 1200);
-        if (pct2) countUp('ringPct2', pct2, 1200);
-    });
-})();
-</script>
 
 </body>
 <?php layoutFoot(); ?>
